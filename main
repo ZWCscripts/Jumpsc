@@ -1,0 +1,15 @@
+-- LocalScript olarak ekleyin (StarterPlayerScripts veya StarterCharacterScripts)
+local player = game.Players.LocalPlayer
+
+function infiniteJump()
+    while true do
+        local character = player.Character or player.CharacterAdded:Wait()
+        local humanoid = character:FindFirstChildOfClass("Humanoid")
+        if humanoid then
+            humanoid:ChangeState(Enum.HumanoidStateType.Jumping)
+        end
+        wait(0.1) -- Zıplama aralığı (isterseniz azaltıp artırabilirsiniz)
+    end
+end
+
+spawn(infiniteJump)
