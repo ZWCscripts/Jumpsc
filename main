@@ -1,15 +1,89 @@
--- LocalScript olarak ekleyin (StarterPlayerScripts veya StarterCharacterScripts)
+-- LocalScript
 local player = game.Players.LocalPlayer
+local uis = game:GetService("UserInputService")
+local runService = game:GetService("RunService")
+local starterGui = game:GetService("StarterGui")
 
-function infiniteJump()
-    while true do
-        local character = player.Character or player.CharacterAdded:Wait()
-        local humanoid = character:FindFirstChildOfClass("Humanoid")
-        if humanoid then
-            humanoid:ChangeState(Enum.HumanoidStateType.Jumping)
-        end
-        wait(0.1) -- Zıplama aralığı (isterseniz azaltıp artırabilirsiniz)
+-- Sonsuz zıplama açık/kapalı kontrolü
+local infiniteJumpEnabled = false
+
+-- GUI Oluşturma
+local screenGui = Instance.new("ScreenGui")
+screenGui.Name = "InfiniteJumpGUI"
+screenGui.Parent = player:WaitForChild("PlayerGui")
+
+local button = Instance.new("TextButton")
+button.Name = "JumpToggleButton"
+button.Text = "Sonsuz Zıplama: Kapalı"
+button.Size = UDim2.new(0, 180, 0, 50)
+button.Position = UDim2.new(0.5, -90, 0.8, 0)
+button.BackgroundColor3 = Color3.fromRGB(38, 50, 56)
+button.TextColor3 = Color3.fromRGB(255,255,255)
+button.Font = Enum.Font.GothamBold
+button.TextSize = 22
+button.AutoButtonColor = true
+button.BorderSizePixel = 0
+button.Parent = screenGui
+button.Active = true
+button.Draggable = true -- PC için
+
+-- Mobil sürükleme desteği
+local dragging, dragInput, dragStart, startPos
+
+button.InputBegan:Connect(function(input)
+    if input.UserInputType == Enum.UserInputType.Touch or input.UserInputType == Enum.UserInputType.MouseButton1 then
+        dragging = true
+        dragStart = input.Position
+        startPos = button.Position
+
+        input.Changed:Connect(function()
+            if input.UserInputState == Enum.UserInputState.End then
+                dragging = false
+            end
+        end)
     end
-end
+end)
 
-spawn(infiniteJump)
+button.InputChanged:Connect(function(input)
+    if dragging and (input.UserInputType == Enum.UserInputType.Touch or input.UserInputType == Enum.UserInputType.MouseMovement) then
+        local delta = input.Position - dragStart
+        button.Position = UDim2.new(
+            startPos.X.Scale,
+            startPos.X.Offset + delta.X,
+            startPos.Y.Scale,
+            startPos.Y.Offset + delta.Y
+        )
+    end
+end)
+
+-- Butona tıklayınca aç/kapa
+button.MouseButton1Click:Connect(function()
+    infiniteJumpEnabled = not infiniteJumpEnabled
+    if infiniteJumpEnabled then
+        button.Text = "Sonsuz Zıplama: Açık"
+        button.BackgroundColor3 = Color3.fromRGB(27, 94, 32)
+    else
+        button.Text = "Sonsuz Zıplama: Kapalı"
+        button.BackgroundColor3 = Color3.fromRGB(38, 50, 56)
+    end
+end)
+
+-- Sonsuz zıplama fonksiyonu (yerdeyse zıpla)
+runService.RenderStepped:Connect(function()
+    if infiniteJumpEnabled then
+        local character = player.Character
+        if character then
+            local humanoid = character:FindFirstChildOfClass("Humanoid")
+            if humanoid and humanoid:GetState() == Enum.HumanoidStateType.Freefall then
+                -- Havadaysa zıplamayı tetikleme
+                return
+            end
+            if humanoid and humanoid:GetState() == Enum.HumanoidStateType.Seated then
+                return -- Koltuktaysa zıplama
+            end
+            if humanoid and humanoid.FloorMaterial ~= Enum.Material.Air then
+                humanoid.Jump = true
+            end
+        end
+    end
+end)
